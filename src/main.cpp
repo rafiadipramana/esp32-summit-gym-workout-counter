@@ -103,9 +103,9 @@ void loop()
 
   if (currentStartButtonState == LOW && lastStartButtonState == HIGH)
   {
-    Serial.println("Tombol start ditekan");
     if (!isCounting)
     {
+      Serial.println("Tombol mulai ditekan");
       isCounting = true;                     // Start counting when the button is pressed
       startTime = millis();
       elapsedTime = 0;
@@ -116,12 +116,12 @@ void loop()
       isPaused = !isPaused;                  // Toggle the paused state when the button is pressed again
       if (isPaused)
       {
-        Serial.println("Counting paused");
+        Serial.println("Perhitungan dijeda");
         elapsedTime += millis() - startTime; // Update the elapsed time when paused
       }
       else
       {
-        Serial.println("Counting resumed");
+        Serial.println("Perhitungan dilanjutkan");
         startTime = millis();                // Reset the start time when resuming
       }
     }
@@ -152,8 +152,7 @@ void loop()
           if (currentTime - highStartTime >= 2000)
           {
             movementCounter++;
-            Serial.println("Counter increased");
-            Serial.println(movementCounter);
+            Serial.println("Gerakan terdeteksi sejumlah " + String(movementCounter));
             highStartTime = 0;                // Reset the start time for the next counting cycle
             waitingForLow = true;             // Now wait for the sensor to go LOW before counting again
           }
@@ -191,8 +190,10 @@ void loop()
   {
     Serial.println("Tombol reset ditekan");
     movementCounter = 0;
-    startTime = millis();                        // Reset the start time when reset is pressed
-    elapsedTime = 0;                             // Reset the elapsed time when reset is pressed
+    startTime = 0;                             // Reset the start time when reset is pressed
+    elapsedTime = 0;                           // Reset the elapsed time when reset is pressed
+    isCounting = false;                        // Stop counting
+    isPaused = true;                           // Ensure counting is paused when reset
     Serial.println("Penghitungan direset dan timer direset");
   }
 
@@ -214,10 +215,10 @@ void loop()
 
     if (httpResponseCode > 0) {
         String response = http.getString();
-        Serial.println("HTTP Response code: " + String(httpResponseCode));
-        Serial.println("Response: " + response);
+        Serial.println("Kode Status HTTP : " + String(httpResponseCode));
+        Serial.println("Respon : " + response);
     } else {
-        Serial.println("Error on sending POST: " + String(httpResponseCode));
+        Serial.println("Galat menyimpan data : " + String(httpResponseCode));
     }
 
     http.end();
@@ -243,7 +244,7 @@ void printResult(AsyncResult &aResult)
 
   if (aResult.isDebug())
   {
-    Firebase.printf("Debug task: %s, msg: %s\n", aResult.uid().c_str(), aResult.debug().message().c_str());
+    Firebase.printf("Debug task: %s, msg: %s\n", aResult.uid().c_str(), aResult.debug().c_str());
   }
 
   if (aResult.isError())
