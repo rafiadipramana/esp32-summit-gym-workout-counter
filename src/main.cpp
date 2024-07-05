@@ -3,18 +3,15 @@
 #include <FirebaseClient.h>
 #include <Wire.h>
 #include <HTTPClient.h>
+#include <LiquidCrystal_I2C.h>
 
 #define PROXIMITY_SENSOR_PIN 33
 #define START_BUTTON_PIN 5
 #define RESET_BUTTON_PIN 18
 #define SAVE_BUTTON_PIN 19
 
-/*
-  WIFI_SSID: Your WiFi SSID
-  WIFI_PASSWORD: Your WiFi Password
-*/
-#define WIFI_SSID "localhost"
-#define WIFI_PASSWORD "akurapaham"
+#define WIFI_SSID "SUMMIT"
+#define WIFI_PASSWORD "summitgym"
 
 /*
   API_KEY: Your Firebase API Key
@@ -48,38 +45,57 @@ AsyncClient aClient(ssl_client, getNetwork(network));
 RealtimeDatabase Database;
 bool taskComplete = false;
 
+LiquidCrystal_I2C lcd(0x27, 16, 2);
+
 void setup()
 {
+  lcd.init();
+  lcd.backlight();
+
   Serial.begin(115200);
+
   pinMode(PROXIMITY_SENSOR_PIN, INPUT);
   pinMode(START_BUTTON_PIN, INPUT_PULLUP);
   pinMode(RESET_BUTTON_PIN, INPUT_PULLUP);
   pinMode(SAVE_BUTTON_PIN, INPUT_PULLUP);
   WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
 
-  Serial.print("Connecting to Wi-Fi");
+  lcd.setCursor(0, 0);
+  lcd.print("Menghubungkan...");
+  Serial.print("Menghubungkan...");
   while (WiFi.status() != WL_CONNECTED)
   {
     Serial.print(".");
     delay(300);
   }
   Serial.println();
+  lcd.setCursor(0, 1);
+  lcd.print("Terkoneksi");
   Serial.print("Connected with IP: ");
   Serial.println(WiFi.localIP());
   Serial.println();
 
   Firebase.printf("Firebase Client v%s\n", FIREBASE_CLIENT_VERSION);
 
+  lcd.clear();
+  lcd.setCursor(0, 0);
+  lcd.print("Inisialisasi...");
   Serial.println("Initializing app...");
   ssl_client.setInsecure();
 
   initializeApp(aClient, app, getAuth(user_auth), asyncCB, "authTask");
   app.getApp<RealtimeDatabase>(Database);
   Database.url(DATABASE_URL);
+
+  lcd.setCursor(0, 1);
+  lcd.print("Siap digunakan");\
+  delay(2000);
+  lcd.clear();
 }
 
 void loop()
 {
+  static unsigned long lastLCDUpdate = 0;    // Static variable to keep track of the last LCD update time
   static unsigned long lastUpdate = 0;       // Static variable to keep track of the last update time
   unsigned long currentMillis = millis();    // Get the current time
 
@@ -101,10 +117,36 @@ void loop()
   static unsigned long startTime = 0;        // Track the time when the start button was pressed
   static unsigned long elapsedTime = 0;      // Track the total elapsed time when counting is active
 
+  if (currentMillis - lastLCDUpdate >= 1000)
+  {
+    lastLCDUpdate = currentMillis;
+    unsigned long totalElapsedTime = elapsedTime;
+    if (isCounting && !isPaused)
+    {
+      totalElapsedTime += millis() - startTime;
+    }
+    unsigned long seconds = (totalElapsedTime / 1000) % 60;
+    unsigned long minutes = (totalElapsedTime / 1000) / 60;
+
+    lcd.setCursor(0, 0);
+    lcd.print("Gerakan: ");
+    lcd.print(movementCounter);
+    lcd.print(" kali");
+    lcd.setCursor(0, 1);
+    lcd.print("Waktu: ");
+    lcd.print(minutes);
+    lcd.print(":");
+    if (seconds < 10) {
+      lcd.print("0"); // Add leading zero for single-digit seconds
+    }
+    lcd.print(seconds);
+  }
+
   if (currentStartButtonState == LOW && lastStartButtonState == HIGH)
   {
     if (!isCounting)
     {
+      lcd.setCursor(0, 0);
       Serial.println("Tombol mulai ditekan");
       isCounting = true;                     // Start counting when the button is pressed
       startTime = millis();
